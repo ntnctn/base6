@@ -3,7 +3,7 @@
 1. Установите зависимости:
 ```bash
 npm init -y
-npm install express express-session
+npm install express express-session bcryptjs cookie-parser memorystore
 ```
 
 2. Запустите сервер:
@@ -16,8 +16,3 @@ node server.js
 http://localhost:3000
 ```
 
-4. Используйте для входа:
-```
-Логин: admin
-Пароль: 12345
-```
