@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .dark {
+            background-color: #333;
+            color: #fff;
+        }
+        
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        #dataContainer {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        
+        .dark #dataContainer {
+            border-color: #666;
+        }
+        
+        .cache-info {
+            font-style: italic;
+            color: #666;
+        }
+        
+        .dark .cache-info {
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <h1>Добро пожаловать, <span id="username"></span>!</h1>
+    
+    <div>
+        <button onclick="loadData()">Обновить данные</button>
+        <button onclick="logout()">Выйти</button>
+    </div>
+    
+    <div id="dataContainer">
+        Нажмите "Обновить данные" для загрузки
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <label>
+            <input type="checkbox" id="themeToggle"> Тёмная тема
+        </label>
+    </div>
+    
+    <script>
+        // Проверка авторизации
+        fetch('/profile').then(response => {
+            if (response.redirected) {
+                window.location.href = '/';
+            }
+        });
+        
+        // Загрузка имени пользователя
+        fetch('/profile').then(() => {
+            document.getElementById('username').textContent = 'Пользователь';
+        });
+        
+        // Загрузка данных
+        function loadData() {
+            document.getElementById('dataContainer').textContent = 'Загрузка...';
+            
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    let html = `
+                        <h3>${data.message}</h3>
+                        <p>Значения: ${data.values.join(', ')}</p>
+                        <p class="cache-info">${data.cached ? 'Данные из кэша' : 'Новые данные'}</p>
+                    `;
+                    document.getElementById('dataContainer').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('dataContainer').textContent = 'Ошибка загрузки данных';
+                    console.error(error);
+                });
+        }
+        
+        // Выход
+        function logout() {
+            fetch('/logout', { method: 'POST' })
+                .then(() => window.location.href = '/');
+        }
+        
+        // Управление темой
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.checked = localStorage.getItem('theme') === 'dark';
+        updateTheme();
+        
+        themeToggle.addEventListener('change', () => {
+            localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
+            updateTheme();
+        });
+        
+        function updateTheme() {
+            document.body.classList.toggle('dark', themeToggle.checked);
+        }
+    </script>
+</body>
+</html>

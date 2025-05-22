@@ -1,43 +1,106 @@
 const express = require('express');
 const session = require('express-session');
+const MemoryStore = require('memorystore')(session);
+const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
+const PORT = 3000;
 
-// Мидлвары
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
 
-// Конфигурация сессии
+app.use(cookieParser());
 app.use(session({
-    secret: 'your_secret_key_here',
+    secret: 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-        secure: false, // Для разработки на localhost
+    store: new MemoryStore({
+        checkPeriod: 86400000 
+    }),
+    cookie: {
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 часа
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 
     }
 }));
 
-// Маршруты
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    // Простая проверка (в реальном приложении - проверка в БД)
-    if (username === 'admin' && password === '12345') {
-        req.session.user = { username };
-        return res.json({ success: true });
+
+function requireAuth(req, res, next) {
+    if (!req.session.user) {
+        return res.redirect('/');
     }
-    res.status(401).json({ success: false });
+    next();
+}
+
+
+const users = [];
+
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+let dataCache = {
+    timestamp: 0,
+    data: null
+};
+
+
+function generateData() {
+    return {
+        message: "Данные сгенерированы в " + new Date().toLocaleTimeString(),
+        values: Array.from({ length: 5 }, () => Math.floor(Math.random() * 100))
+    };
+}
+
+
+app.get('/', (req, res) => {
+    if (req.session.user) {
+        return res.redirect('/profile');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/check-auth', (req, res) => {
-    if (req.session.user) {
-        return res.json({ authenticated: true, user: req.session.user });
+app.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+    
+    
+    if (users.some(u => u.username === username)) {
+        return res.status(400).send('Пользователь уже существует');
     }
-    res.json({ authenticated: false });
+    
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    
+    users.push({
+        username,
+        password: hashedPassword
+    });
+    
+    res.redirect('/');
+});
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    const user = users.find(u => u.username === username);
+    
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res.status(401).send('Неверные учетные данные');
+    }
+    
+    
+    req.session.user = {
+        username: user.username
+    };
+    
+    res.redirect('/profile');
+});
+
+app.get('/profile', requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
 app.post('/logout', (req, res) => {
@@ -46,13 +109,36 @@ app.post('/logout', (req, res) => {
             return res.status(500).send('Ошибка выхода');
         }
         res.clearCookie('connect.sid');
-        res.json({ success: true });
+        res.redirect('/');
     });
 });
 
-app.listen(3000, () => {
-    console.log('Сервер запущен на http://localhost:3000');
-    console.log('Для теста используйте:');
-    console.log('Логин: admin');
-    console.log('Пароль: 12345');
+app.get('/data', (req, res) => {
+    const now = Date.now();
+    
+    
+    if (now - dataCache.timestamp < 60000 && dataCache.data) {
+        return res.json({
+            ...dataCache.data,
+            cached: true
+        });
+    }
+    
+    
+    const newData = generateData();
+    dataCache = {
+        timestamp: now,
+        data: newData
+    };
+    
+    res.json({
+        ...newData,
+        cached: false
+    });
+});
+
+
+
+app.listen(PORT, () => {
+    console.log(`Сервер запущен на http://localhost:${PORT}`);
 });

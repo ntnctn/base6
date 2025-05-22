@@ -5,34 +5,112 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Авторизация</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .form-group { margin-bottom: 15px; }
-        input { padding: 8px; width: 100%; box-sizing: border-box; }
-        button { padding: 10px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; }
-        button:hover { background: #45a049; }
-        .hidden { display: none; }
-        .error { color: red; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .dark {
+            background-color: #333;
+            color: #fff;
+        }
+        
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        input, button {
+            padding: 8px;
+            font-size: 16px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: #f0f0f0;
+        }
+        
+        .tab.active {
+            background: #ddd;
+        }
+        
+        .dark .tab {
+            background: #444;
+            border-color: #666;
+            color: #fff;
+        }
+        
+        .dark .tab.active {
+            background: #555;
+        }
     </style>
 </head>
 <body>
-    <div id="auth-section">
-        <h2>Вход в систему</h2>
-        <div class="form-group">
-            <input type="text" id="username" placeholder="Логин">
-        </div>
-        <div class="form-group">
-            <input type="password" id="password" placeholder="Пароль">
-        </div>
-        <button id="login-btn">Войти</button>
-        <p id="error-message" class="error hidden"></p>
+    <h1>Авторизация</h1>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('login')">Вход</div>
+        <div class="tab" onclick="showTab('register')">Регистрация</div>
     </div>
-
-    <div id="profile-section" class="hidden">
-        <h2>Профиль</h2>
-        <p>Добро пожаловать, <span id="username-display"></span>!</p>
-        <button id="logout-btn">Выйти</button>
+    
+    <form id="loginForm" action="/login" method="POST">
+        <input type="text" name="username" placeholder="Логин" required>
+        <input type="password" name="password" placeholder="Пароль" required>
+        <button type="submit">Войти</button>
+    </form>
+    
+    <form id="registerForm" action="/register" method="POST" style="display: none;">
+        <input type="text" name="username" placeholder="Логин" required>
+        <input type="password" name="password" placeholder="Пароль" required>
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+    
+    <div style="margin-top: 20px;">
+        <label>
+            <input type="checkbox" id="themeToggle"> Тёмная тема
+        </label>
     </div>
-
-    <script src="script.js"></script>
+    
+    <script>
+        // Переключение между вкладками
+        function showTab(tabName) {
+            document.getElementById('loginForm').style.display = tabName === 'login' ? 'flex' : 'none';
+            document.getElementById('registerForm').style.display = tabName === 'register' ? 'flex' : 'none';
+            
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            if (tabName === 'login') {
+                tabs[0].classList.add('active');
+            } else {
+                tabs[1].classList.add('active');
+            }
+        }
+        
+        // Управление темой
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.checked = localStorage.getItem('theme') === 'dark';
+        updateTheme();
+        
+        themeToggle.addEventListener('change', () => {
+            localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
+            updateTheme();
+        });
+        
+        function updateTheme() {
+            document.body.classList.toggle('dark', themeToggle.checked);
+        }
+    </script>
 </body>
 </html>
